@@ -17,18 +17,23 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  **********************************************************************/
 
+import java.util.ArrayList;
 
 public class TargetInformation {
 
-    public String name;        /* The name of the object */
-    public double ra_deg;      /* Right ascension... */
-    public double dec_deg;     /* and declination, in decimal degrees... */
-    public String ra;          /* ... and also in sexagesimal
+    public String name;          /* name of the object, used for the resolution */
+    public double ra_deg;        /* right ascension... */
+    public double dec_deg;       /* and declination, in decimal degrees... */
+    public String ra;            /* ... and also in sexagesimal
     public String dec;
-    public int epoch;          /* Astronomical epoch */
-    public double pm_ra;       /* The proper motion, for both RA ... */
-    public double pm_dec;      /* and declination */
-    public String objectType;  /* As reported by SIMBAD */
+    public int epoch;            /* astronomical epoch */
+    public int equinox;          /* and equinox */
+    public String ref_system;    /* celestial reference system */
+    public double pm_ra;         /* The proper motion, for both RA ... */
+    public double pm_dec;        /* and declination */
+    public String object_type;   /* As reported by SIMBAD */
+    /* List of identifiers for the object, as reported by SIMBAD */
+    public ArrayList identifiers = new ArrayList();
 
     public TargetInformation(String name) {
 	this.name = name;
