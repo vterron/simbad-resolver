@@ -21,10 +21,10 @@ import java.util.ArrayList;
 
 public class TargetInformation {
 
-    public String name;          /* name of the object, used for the resolution */
+    public String name;          /* identifier used for the SIMBAD query */
     public double ra_deg;        /* right ascension... */
     public double dec_deg;       /* and declination, in decimal degrees... */
-    public String ra;            /* ... and also in sexagesimal
+    public String ra;            /* ... and also in sexagesimal */
     public String dec;
     public int epoch;            /* astronomical epoch */
     public int equinox;          /* and equinox */
@@ -32,10 +32,23 @@ public class TargetInformation {
     public double pm_ra;         /* The proper motion, for both RA ... */
     public double pm_dec;        /* and declination */
     public String object_type;   /* As reported by SIMBAD */
-    /* List of identifiers for the object, as reported by SIMBAD */
-    public ArrayList identifiers = new ArrayList();
 
     public TargetInformation(String name) {
 	this.name = name;
+    }
+
+    /* System-independent newline character */
+    public static String newline = System.getProperty("line.separator");
+
+    public String toString(){
+	StringBuilder repr = new StringBuilder();
+	repr.append(String.format("Name: %s%s", this.name, newline));
+	repr.append(String.format("Type: %s%s", this.object_type, newline));
+	repr.append(String.format("RA: %s (%f)%s", this.ra, this.ra_deg, newline));
+	repr.append(String.format("DEC: %s (%f)%s", this.dec, this.dec_deg, newline));
+	repr.append(String.format("Epoch: J%d | Equinox: %d%s", this.epoch, this.equinox, newline));
+	repr.append(String.format("Reference system: %s%s", this.ref_system, newline));
+	repr.append(String.format("Proper motions: %f %f", this.pm_ra, this.pm_dec));
+	return repr.toString();
     }
 }
