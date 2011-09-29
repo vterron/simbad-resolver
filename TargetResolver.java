@@ -1,4 +1,4 @@
-/* SIMBAD-based star coordinates resolver for the PANIC Observation Tool
+/* SIMBAD-based target resolver for the PANIC Observation Tool
  *
  * Copyright (c) 2011 Victor Terron. All rights reserved.
  * Institute of Astrophysics of Andalusia, IAA-CSIC
@@ -19,191 +19,199 @@
 
 import java.net.URL;
 import java.net.URLEncoder;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.BufferedReader;
-import java.util.ArrayList;
 import java.util.StringTokenizer;
+
+/* The mandatory acknowledgement: the process of writing this class was heavily
+ * simplified by the fact that the Jean-Marie Mariotti Center has a Java class
+ * with the same functionality and available online, which considerably helped
+ * me understand how scripts are submitted to SIMBAD:
+ * http://mariotti.fr/MCS/MAR2011/doc/jmcs/api/html/StarResolver_8java-source.html */
 
 public class TargetResolver {
 
-    public static String ref_system = "FK5";
-    public static int epoch = 2000;
-    public static int equinox = 2000;  // these values are Matilde-certified.
-
+	/* The URL to which the script is submitted to SIMBAD */
     public static final String _simbadBaseURL = "http://simbad.u-strasbg.fr/simbad/sim-script?script=";
 
-    public static String query_SIMBAD (String targetName) {
+    /* The beginning of the output of SIMBAD if an error is encountered when
+     * parsing the script. This value will be used so that after submitting
+     * our query we can easily know whether everything worked properly. */ 
+    public static final String _simbadErrorStart = "::error::";
+	
+	/* These are the default values that the TargetResolver uses in order to
+	 * extract the coordinates of an object from the SIMBAD database. In case
+	 * different values (such as ICRS as the reference system or 1950 as
+	 * epoch), use the parameterized constructor instead */
+	
+	public String ref_system = "FK5";  /* celestial coordinate system */
+    public int epoch = 2000;
+    public int equinox = 2000;
+    
+    public TargetResolver(){}
+    
+    public TargetResolver(String ref_system, int epoch, int equinox){
+    	this.ref_system = ref_system;
+    	this.epoch = epoch;
+    	this.equinox = equinox;
+    }
+    
+    
+    /* Queries SIMBAD by identifier (in layman's terms, the name of the object)
+     * and returns the output as a String. If the connection to SIMBAD fails,
+     * for whatever arcane reason, SIMBADQueryException is thrown.
+     * 
+     * The complete syntax of the SIMBAD scripts can be found at:
+	 * http://simbad.u-strasbg.fr/simbad/sim-help?Page=sim-fscript */
+    
+    public String query_SIMBAD (String targetName) throws SIMBADQueryException {
 
-	// For the SIMBAD script and the result
-	StringBuilder buffer = new StringBuilder();
-
-	/* Refer to the following (and ugly) URL for a complete explanation of
-	   the parameters being used here: http://swedishdanish.appspot.com/u?\
-           purl=dHBpcmNzZi1taXM9ZWdhUD9wbGVoLW1pcy9kYWJtaXMvcmYuZ2JzYXJ0cy11Lm\
-           RhYm1pcy8vOnB0%0AdGg%3D%0A */
-
-	buffer.append("output console=off script=off\n"); // Just data
-	buffer.append("format object form1 \""); // Simbad script preambule
-
-	/* %COO(options) --> the option string is made of 5 parts separated by semicolons:
-	   formatting-options ';' element-list ';' frame ';' epoch ';' equinox.
-	   Note that the epoch must be prefixed by 'B' or 'J'
-	   Formatting option: 'd' --> display the coordinates in decimal numbers
-	   Element list: 'A' --> right ascension, 'D' --> declination */
-
-	String line_remainder = TargetResolver.ref_system + ";" +
-                                "J" + TargetResolver.epoch + ";" +
-                                TargetResolver.equinox + ")\\n";
-
-	buffer.append("%COO(d;A;" + line_remainder);  // RA (decimal degrees)
-        buffer.append("%COO(A;"   + line_remainder);  // RA (sexagesimal)
-	buffer.append("%COO(d;D;" + line_remainder);  // DEC (decimal degrees)
-        buffer.append("%COO(D;"   + line_remainder);  // DEC (sexagesimal)
-
-	buffer.append("%OTYPE(V)\\n");  // Object type (verbose)
-	buffer.append("%PM(A)\\n");     // Proper motion on the RA axis
-
-	buffer.append("%PM(D)\\n");     // Proper motion on the DEC axis
-	//buffer.append("%IDLIST[%*,]\\n");    // all the identifier of the object, one per line
-	buffer.append("\"\n"); // end of SIMBAD script
-	buffer.append("query id " + targetName); // Add the object name we are looking for
-
-	final String simbadScript = buffer.toString();
-
-	InputStream inputStream = null;
-
-	try {
-	    // Forge the URL int UTF8 unicode charset
-	    final String encodedScript = URLEncoder.encode(simbadScript, "UTF-8");
-	    final String simbadURL = _simbadBaseURL + encodedScript;
-
-	    inputStream = new URL(simbadURL).openStream();
-	    final InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
-	    final BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
-
-	    // Read incoming data line by line
-	    String currentLine = null;
-
-	    // reset buffer :
-	    buffer.setLength(0);
-
-	    while ((currentLine = bufferedReader.readLine()) != null) {
-		if (buffer.length() > 0) {
-		    buffer.append('\n');
+		/* Used for both the SIMBAD script and its output */
+		StringBuilder buffer = new StringBuilder();
+	
+		/* Mask the script display in the output as well as the execution details */
+		buffer.append("output console=off script=off\n");
+		/* This defines the data items of the object that we want to retrieve */
+		buffer.append("format object form1 \"");
+	
+		/* In %COO(options), the option string is made of 5 parts separated by
+		 * semicolons: formatting options, ('s' for sexagesimal coordinates, 'd'
+		 * for decimal), element list ('A' for right ascension, 'B' for declination),
+		 * frame (ICRS, FK5, FK4, GAL, SGAL or ECL), epoch (which must be prefixed by
+		 * 'B' or 'J') and equinox. */
+		
+		/* Avoid having to type "FK5; J2000; 2000)" (if the default TargetResolver
+		 * parameters are used) at the end of each line over and over */
+		String line_remainder = this.ref_system + ";" + "J" + this.epoch + ";" + this.equinox + ")\\n";
+	
+		buffer.append("%COO(d;A;" + line_remainder);  /* RA (decimal degrees) */
+		buffer.append("%COO(A;"   + line_remainder);  /* RA (sexagesimal degrees) */
+		buffer.append("%COO(d;D;" + line_remainder);  /* DEC (decimal degrees) */
+		buffer.append("%COO(D;"   + line_remainder);  /* DEC (sexagesimal degrees) */
+	
+		buffer.append("%OTYPE(V)\\n");  /* Verbose display of the main object type */
+		buffer.append("%PM(A)\\n");     /* Proper motion on the right ascension axis */
+		buffer.append("%PM(D)\\n");     /* Proper motion on the declination axis */
+		buffer.append("\"\n"); 		    /* marks the end of the paramaters we want */	
+		buffer.append("query id " + targetName);  /* The objet to find in SIMBAD */
+	
+		final String simbadScript = buffer.toString();
+		buffer.setLength(0); /* reset the buffer */
+		
+		InputStream scriptOutput = null;
+		try {
+			
+			/* Forge the full URL of the script, using the UTF-8 unicode charset */
+			final String encodedScript = URLEncoder.encode(simbadScript, "UTF-8");
+			final String simbadURL = _simbadBaseURL + encodedScript;
+			
+			/* Submit the SIMBAD script and read the output, line by line */
+			scriptOutput = new URL(simbadURL).openStream();
+			final InputStreamReader inputStreamReader = new InputStreamReader(scriptOutput);
+			final BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
+			
+			String currentLine = null;
+			while ((currentLine = bufferedReader.readLine()) != null) {
+				if (buffer.length() > 0) {	
+					buffer.append('\n');
+				}	
+				buffer.append(currentLine);
+		    }
+		    
+			/* Return the string representation of the SIMBAD output */
+			return buffer.toString();
+			
+		} catch (IOException ex) {
+			throw new SIMBADQueryException();
+		} finally {
+			try {
+				scriptOutput.close();
+			}
+			catch (IOException ex) {}
 		}
-
-		buffer.append(currentLine);
-	    }
-
-	    return buffer.toString();
-
-	} catch (Exception ex) {
-	    //System.out.println("SIMBAD query failed");
-	    return null;
 	}
-    }
+    
+    /* The main method of the class and the only one you should care about:
+     * it receives the name of the object (known by SIMBAD as the identifier),
+     * queries SIMBAD and encapsulated its output as a TargetInformation
+     * instance. Throws SIMBADQueryException if the connection to SIMBAD
+     * failed, and TargetNotFoundException if the object could not be find
+     * in the database. Yes, who would have guess that an exception with that
+     * name would be *that*? */
+     
+    public TargetInformation submit (String targetName)
+    		throws SIMBADQueryException, TargetNotFoundException{
 
-    	/* If the identifier is not found in the database, SIMBAD returns the following:
-	::error:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-	[empty line]
-	[3] Identifier not found in the database : WASP-234
-	*/
-
-    /* Returns 0 if everything went wrong, 1 otherwise.
-       TODO: is there (somewhere) a list of SIMBAD error codes?
-    */
-    public static int errorCheck(String simbad_output) {
-
-	/* In case of error, SIMBAD returns something like this:
-	::error:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-	[empty line]
-	[3] Identifier not found in the database : WASP-234
-	*/
-
-	final String errorStart = "::error::";
-	StringTokenizer lineTokenizer = new StringTokenizer(simbad_output, "\n");
-	if(lineTokenizer.nextToken().startsWith(errorStart))
-	    return 1;
-	else
-	    return 0;
-    }
-
-
-    public static TargetInformation resolve (String targetName){
-
-	/*******************************************************************/
-	/* See: http://mariotti.fr/MCS/MAR2011/doc/jmcs/api/html/StarResolver_8java-source.html */
-	/*******************************************************************/
-
-	String simbadResult = query_SIMBAD(targetName);
-	// in case the query to SIMBAD failed
-	if (simbadResult == null)
-	    return null;
-
-	/* Check that the query went all right */
-	int retcode = TargetResolver.errorCheck(simbadResult);
-
-	if(retcode != 0)
-	    return null;  /* TODO: throw our own type of exception */
-
-	/**************** TEMPORARILY COMMENTED OUT. DO WE NEED THIS? *****/
-	/* Remove any blanking character (~)
-	simbadResult = simbadResult.replaceAll("~[ ]*", "");
-	System.out.println(simbadResult);
-	*******************************************************************/
-
-	final TargetInformation info = new TargetInformation(targetName);
-	info.epoch      = TargetResolver.epoch;
-	info.equinox    = TargetResolver.equinox;
-	info.ref_system = TargetResolver.ref_system;
-
-	/* Parse the output of SIMBAD, line by line.
-	   SIMBAD returns "~" when something is not known */
-	StringTokenizer lineTokenizer = new StringTokenizer(simbadResult, "\n");
-
-	/* 1st line: RA, in decimal degrees */
-	info.ra_deg = Double.parseDouble(lineTokenizer.nextToken());
-
-	/* 2nd line: RA, in sexagesimal */
-	info.ra = lineTokenizer.nextToken();
-
-	/* 3rd line: DEC, in decimal degrees */
-	info.dec_deg = Double.parseDouble(lineTokenizer.nextToken());
-
-	/* 4th line: DEC, in sexagesimal */
-	info.dec = lineTokenizer.nextToken();
-
-	/* 5th line: object type */
-	info.object_type = lineTokenizer.nextToken();
-
-	/* 6th line: proper motion on the RA axis */
-	try {
-	    info.pm_ra = Double.parseDouble(lineTokenizer.nextToken());
-	}
-	catch (NumberFormatException e) {
-	    info.pm_ra = Double.NaN;
-	}
-
-	/* 7th line: motion on the DEC axis */
-	try {
-	    info.pm_dec = Double.parseDouble(lineTokenizer.nextToken());
-	}
-	catch (NumberFormatException e) {
-	    info.pm_dec = Double.NaN;
-	}
-
-	/* 8th and subsequent lines store the different identifiers for the
-	 * object returned by SIMBAD. For now we are only interested in the
-	 * first one (which is apparently also the most 'populer'); the rest is
-	 * silently ignored
-	info.name = lineTokenizer.nextToken();
-	************************/
-	return info;
+	    String simbadResult = this.query_SIMBAD(targetName);
+	
+	    /* There possibly are many things that could go wrong (I have been
+	     * unable to find a list with all the error codes on the SIMBAD
+	     * website) but, since the syntax of the script submitted to the
+	     * database has been thoroughly tested and is known to be correct,
+	     * we can safely assume that errors will only happen when the object
+	     * cannot be found. That is why we return a TargetNotFoundException:
+	     * although a different error could have occurred, for our purposes
+	     * in the PANIC Observation Tool it is equivalent to the object not
+	     * being found. */
+	    
+	    if (simbadResult.startsWith(TargetResolver._simbadErrorStart))
+	    	throw new TargetNotFoundException();
+	    	
+		final TargetInformation info = new TargetInformation(targetName);
+		info.epoch      = this.epoch;
+		info.equinox    = this.equinox;
+		info.ref_system = this.ref_system;
+	
+		/* Parse the output of SIMBAD, line by line */				
+		StringTokenizer lineTokenizer = new StringTokenizer(simbadResult, "\n");
+	
+		/* For what so far I have seen, SIMBAD seems to always return "~" when
+		 * a data item is not known. That is we need to catch the exceptions
+		 * that may be thrown if a conversion to Double fails.*/
+		
+		try {
+			/* First line of the output: right ascension, in decimal degrees */ 
+			info.ra_deg = Double.parseDouble(lineTokenizer.nextToken());
+		} catch (NumberFormatException ex) {}  
+	
+		/* Second line: right ascension, in sexagesimal numbers (a string ) */
+		info.ra = lineTokenizer.nextToken();
+			
+		try {
+			/* Third line: declination, in decimal degrees */
+			info.dec_deg = Double.parseDouble(lineTokenizer.nextToken());
+		} catch (NumberFormatException ex) {}
+	
+		/* Fouth line: declination, in sexagesimal (string) */
+		info.dec = lineTokenizer.nextToken();
+	
+		/* Fifth line: classification of the object */
+		info.object_type = lineTokenizer.nextToken();
+	
+		try {
+			/* Sixth line: proper motion on the right ascension axis */
+		    info.pm_ra = Double.parseDouble(lineTokenizer.nextToken());
+		} catch (NumberFormatException ex) {}
+	
+		try {
+			/* Seventh line: proper motion on the declination axis */
+		    info.pm_dec = Double.parseDouble(lineTokenizer.nextToken());
+		} catch (NumberFormatException ex) {}
+		
+		return info;
     }
 
     public static void main(String[] args) {
-	TargetInformation info = TargetResolver.resolve(args[0]);
-	System.out.println(info);
+    	
+    	TargetResolver resolver = new TargetResolver();
+    	try {
+    		TargetInformation info = resolver.submit(args[0]);
+    		System.out.println(info);
+    	} catch (Exception ex) {
+    		System.out.println("not found!");
+    	}
+	
     }
 }
