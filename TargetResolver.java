@@ -45,15 +45,23 @@ public class TargetResolver {
 	 * extract the coordinates of an object from the SIMBAD database. In case
 	 * different values (such as ICRS as the reference system or 1950 as
 	 * epoch), use the parameterized constructor instead */
-	
-	public String ref_system = "FK5";  /* celestial coordinate system */
-    public int epoch = 2000;
-    public int equinox = 2000;
     
-    public TargetResolver(){}
+    public static ReferenceSystem DEFAULT_SYSTEM = ReferenceSystem.FK5;
+    public static int DEFAULT_EPOCH = 2000;
+    public static int DEFAULT_EQUINOX = 2000;
     
-    public TargetResolver(String ref_system, int epoch, int equinox){
-    	this.ref_system = ref_system;
+    public ReferenceSystem system;
+    public int epoch;
+    public int equinox;
+        
+    public TargetResolver() {
+        this.system = DEFAULT_SYSTEM;
+        this.epoch = DEFAULT_EPOCH;
+        this.equinox = DEFAULT_EQUINOX;
+    }
+    
+    public TargetResolver(ReferenceSystem system, int epoch, int equinox){
+    	this.system = system;
     	this.epoch = epoch;
     	this.equinox = equinox;
     }
@@ -84,7 +92,7 @@ public class TargetResolver {
 		
 		/* Avoid having to type "FK5; J2000; 2000)" (if the default TargetResolver
 		 * parameters are used) at the end of each line over and over */
-		String line_remainder = this.ref_system + ";" + "J" + this.epoch + ";" + this.equinox + ")\\n";
+		String line_remainder = this.system + ";" + "J" + this.epoch + ";" + this.equinox + ")\\n";
 	
 		buffer.append("%COO(d;A;" + line_remainder);  /* RA (decimal degrees) */
 		buffer.append("%COO(A;"   + line_remainder);  /* RA (sexagesimal degrees) */
@@ -142,8 +150,24 @@ public class TargetResolver {
      * name would be *that*? */
      
     public TargetInformation submit (String targetName)
-    		throws SIMBADQueryException, TargetNotFoundException{
+    		throws SIMBADQueryException, TargetNotFoundException {
 
+    	/* What follows is an Easter egg, as understood by an admirer of Isaac
+    	 * Asimov: if asked to resolve the target "Trantor", the resolved 
+    	 * coordinates are those of Sagittarius A* (located at the center of
+    	 * the Milky Way), but reported to belong to this fictional planet.
+    	 * In case you do not fully understand this hidden message, I humbly
+    	 * urge you to read Asimov's Foundation (1951) */
+    	
+    	final String _easterEggTargetName = "Trantor";
+    	if (targetName != null &&
+    			targetName.toLowerCase().equals(_easterEggTargetName.toLowerCase())) {
+    		TargetInformation easterInfo = new TargetResolver().submit("Sagittarius A*");
+    		easterInfo.name = _easterEggTargetName; 
+    		easterInfo.object_type = "Capital of the Galactic Empire";
+    		return easterInfo;
+    	}
+    	    	
 	    String simbadResult = this.query_SIMBAD(targetName);
 	
 	    /* There possibly are many things that could go wrong (I have been
@@ -162,7 +186,7 @@ public class TargetResolver {
 		final TargetInformation info = new TargetInformation(targetName);
 		info.epoch      = this.epoch;
 		info.equinox    = this.equinox;
-		info.ref_system = this.ref_system;
+		info.system = this.system;
 	
 		/* Parse the output of SIMBAD, line by line */				
 		StringTokenizer lineTokenizer = new StringTokenizer(simbadResult, "\n");
