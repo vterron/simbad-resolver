@@ -46,7 +46,7 @@ public class TargetResolver {
 	 * different values (such as ICRS as the reference system or 1950 as
 	 * epoch), use the parameterized constructor instead */
     
-    public static ReferenceSystem DEFAULT_SYSTEM = ReferenceSystem.FK5;
+    public static ReferenceSystem DEFAULT_SYSTEM = ReferenceSystem.ICRS;
     public static int DEFAULT_EPOCH = 2000;
     public static int DEFAULT_EQUINOX = 2000;
     
