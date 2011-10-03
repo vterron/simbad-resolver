@@ -20,7 +20,7 @@
 /* Signals that the connection to the SIMBAD database failed */
 public class SIMBADQueryException extends Exception {
 
-	/* Eclipse's "Add general serial version ID" quick fix */
-	private static final long serialVersionUID = -8431593232576223153L;
+    /* Eclipse's "Add general serial version ID" quick fix */
+    private static final long serialVersionUID = -8431593232576223153L;
 
 }

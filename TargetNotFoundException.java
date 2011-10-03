@@ -20,7 +20,7 @@
 /* Indicates that the object could no be found in SIMBAD */ 
 public class TargetNotFoundException extends Exception {
 
-	/* Eclipse's "Add general serial version ID" quick fix */
-	private static final long serialVersionUID = -7533425965318849397L;
+    /* Eclipse's "Add general serial version ID" quick fix */
+    private static final long serialVersionUID = -7533425965318849397L;
 
 }
