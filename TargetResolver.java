@@ -17,13 +17,16 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  **********************************************************************/
 
-import java.net.URL;
-import java.net.URLEncoder;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.BufferedReader;
+import java.util.Calendar;
 import java.util.StringTokenizer;
+import java.util.TimeZone;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /* The mandatory acknowledgment: the process of writing this class was heavily
  * simplified by the fact that the Jean-Marie Mariotti Center has a Java class
@@ -33,14 +36,18 @@ import java.util.StringTokenizer;
 
 public class TargetResolver {
 
-    /* The URL to which the script is submitted to SIMBAD */
-    public static final String _simbadBaseURL = 
-            "http://simbad.u-strasbg.fr/simbad/sim-script?script=";
-
     /* The beginning of the output of SIMBAD if an error is encountered when
      * parsing the script. This value will be used so that after submitting
      * our query we can easily know whether everything worked properly. */ 
     public static final String _simbadErrorStart = "::error::";
+    
+    /* The maximum time to wait when then query is submitted to SIMBAD, given
+     * in seconds. If this time is exceeded the connection will be aborted and
+     * the SIMBADQueryException thrown. The SIMBAD database is reliable enough
+     * as to be expected to be online at all times, but at the very least this
+     * will prevent our code from hanging up in case network access is lost */     
+    public static final long TIMEOUT = 5;
+    
     
     /* These are the default values that TargetResolver uses in order to extract
      * the coordinates of an object from the SIMBAD database. In case different
@@ -48,7 +55,8 @@ public class TargetResolver {
      * needed, use the parameterized constructor instead */
    
     public static ReferenceSystem DEFAULT_SYSTEM = ReferenceSystem.ICRS;
-    public static int DEFAULT_EPOCH = 2000;
+    public static int DEFAULT_EPOCH = /* The current year (Universal Time) */ 
+            Calendar.getInstance(TimeZone.getTimeZone("UTC")).get(Calendar.YEAR);
     public static int DEFAULT_EQUINOX = 2000;
     
     public ReferenceSystem system;
@@ -56,8 +64,8 @@ public class TargetResolver {
     public int equinox;
        
     public TargetResolver() {
-        this.system = DEFAULT_SYSTEM;
-        this.epoch = DEFAULT_EPOCH;
+        this.system  = DEFAULT_SYSTEM;
+        this.epoch   = DEFAULT_EPOCH;
         this.equinox = DEFAULT_EQUINOX;
     }
         
@@ -67,85 +75,6 @@ public class TargetResolver {
         this.equinox = equinox;
     }
     
-    
-    /* Queries SIMBAD by identifier (in layman's terms, the name of the object)
-     * and returns the output as a String. If the connection to SIMBAD fails,
-     * for whatever arcane reason, SIMBADQueryException is thrown.
-     * 
-     * The complete syntax of the SIMBAD scripts can be found at:
-     * http://simbad.u-strasbg.fr/simbad/sim-help?Page=sim-fscript */
-    
-    public String query_SIMBAD (String targetName) throws SIMBADQueryException {
-
-        /* Used for both the SIMBAD script and its output */
-        StringBuilder buffer = new StringBuilder();
-    
-        /* Mask the script display in the output as well as the execution details */
-        buffer.append("output console=off script=off\n");
-        /* This defines the data items of the object that we want to retrieve */
-        buffer.append("format object form1 \"");
-    
-        /* In %COO(options), the option string is made of 5 parts separated by
-         * semicolons: formatting options, ('s' for sexagesimal coordinates, 'd'
-         * for decimal), element list ('A' for right ascension, 'B' for declination),
-         * frame (ICRS, FK5, FK4, GAL, SGAL or ECL), epoch (which must be prefixed
-         * by B' or 'J') and equinox. */
-        
-        /* Avoid having to type the reference system, epoch and equinox (e.g.,
-         * "FK5; J2000; 2000)" if the default TargetResolver is used) at the
-         * end of each line over and over */
-        String line_remainder = this.system + ";" + "J" + this.epoch + ";" + this.equinox + ")\\n";
-    
-        buffer.append("%COO(d;A;" + line_remainder);  /* RA (decimal degrees) */
-        buffer.append("%COO(A;"   + line_remainder);  /* RA (sexagesimal degrees) */
-        buffer.append("%COO(d;D;" + line_remainder);  /* DEC (decimal degrees) */
-        buffer.append("%COO(D;"   + line_remainder);  /* DEC (sexagesimal degrees) */
-    
-        buffer.append("%OTYPE(V)\\n");  /* Verbose display of the main object type */
-        buffer.append("%PM(A)\\n");     /* Proper motion on the right ascension axis */
-        buffer.append("%PM(D)\\n");     /* Proper motion on the declination axis */
-        buffer.append("\"\n");          /* marks the end of the parameters we want */    
-        buffer.append("query id " + targetName);  /* The object to find in SIMBAD */
-    
-        final String simbadScript = buffer.toString();
-        buffer.setLength(0); /* reset the buffer */
-        
-        InputStream scriptOutput = null;
-        try {
-            
-            /* Forge the full URL of the script, using the UTF-8 unicode charset */
-            final String encodedScript = URLEncoder.encode(simbadScript, "UTF-8");
-            final String simbadURL = _simbadBaseURL + encodedScript;
-            
-            /* Submit the SIMBAD script and read the output, line by line */
-            scriptOutput = new URL(simbadURL).openStream();
-            final InputStreamReader inputStreamReader = new InputStreamReader(scriptOutput);
-            final BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
-            
-            String currentLine = null;
-            while ((currentLine = bufferedReader.readLine()) != null) {
-                if (buffer.length() > 0) {    
-                    buffer.append('\n');
-                }    
-                buffer.append(currentLine);
-            }
-            
-            /* Return the string representation of the SIMBAD output */
-            return buffer.toString();
-            
-        } catch (IOException ex) {
-            throw new SIMBADQueryException();
-        } finally {
-            try {
-                scriptOutput.close();
-            }
-            catch (IOException ex) {
-                /* No need to abort the execution if the connection to SIMBAD
-                 * could not be properly closed. Not an ideal scenario, of
-                 * course, but neither apocalyptical. We can live with that. */
-                }
-        }
-    }
     
     /* The main method of the class and the only one you should care about:
      * it receives the name of the object (known by SIMBAD as the identifier),
@@ -163,7 +92,7 @@ public class TargetResolver {
          * coordinates are those of Sagittarius A* (located at the center of
          * the Milky Way), but reported to belong to this fictional planet.
          * In case you do not fully understand this hidden message, I humbly
-         * urge you to read Asimov's Foundation (1951) */
+         * urge you to read Asimov's "Foundation" (1951) */
         
         final String _easterEggTargetName = "Trantor";
         if (targetName != null &&
@@ -173,8 +102,32 @@ public class TargetResolver {
             easterInfo.object_type = "Capital of the Galactic Empire";
             return easterInfo;
         }
-                
-        String simbadResult = this.query_SIMBAD(targetName);
+              
+
+        /* Run our query to SIMBAD in a thread and retrieve the result. But do
+         * not wait endlessly for the query to complete; after TIMEOUT seconds,
+         * we give up and the wait times out. */        
+        
+        Callable<String> querier =
+                new SIMBADQuerier(targetName, this.system, this.epoch, this.equinox);
+        
+        ExecutorService threadExecutor = Executors.newSingleThreadExecutor();
+        Future<String> threadResult = threadExecutor.submit(querier);
+        threadExecutor.shutdown();
+        
+        String simbadResult;
+        
+        try {
+            simbadResult = threadResult.get(TargetResolver.TIMEOUT, TimeUnit.SECONDS);
+        } catch (InterruptedException ex) {
+            throw new SIMBADQueryException();
+        } catch (ExecutionException ex) {
+            throw new SIMBADQueryException();
+        } catch (TimeoutException ex) {
+            threadResult.cancel(true);
+            throw new SIMBADQueryException(); 
+        }
+          
     
         /* There possibly are many things that could go wrong (I have been
          * unable to find a list with all the error codes on the SIMBAD
@@ -244,6 +197,7 @@ public class TargetResolver {
     public static void main(String[] args) {
         
         TargetResolver resolver = new TargetResolver();
+        
         try {
             TargetInformation info = resolver.submit(args[0]);
             System.out.println(info);
@@ -252,5 +206,7 @@ public class TargetResolver {
         } catch (SIMBADQueryException e) {
             System.out.println("connection failed");
         }
+        
+        System.exit(0);
     }
 }
