@@ -125,16 +125,28 @@ public class Staralt {
     }
     
     /* An illustration of how Staralt might be used in real code */  
-    public static void main(String[] args) throws IOException, SIMBADQueryException, TargetNotFoundException {
+    public static void main(String[] args) throws IOException {
         
-        TargetResolver resolver = new TargetResolver();
-        TargetInformation info = resolver.submit("M101"); 
-             
-        Staralt staralt = new Staralt();
-        File plot = staralt.plot(info);
-        System.out.println("Plot saved to: " + plot.getAbsolutePath());
-        /* Do stuff with the plot */
-        plot.deleteOnExit(); /* don't clutter the temporary directory */
+        try {
+            TargetResolver resolver = new TargetResolver();
+            TargetInformation info = resolver.submit("M101");
+            System.out.println(info);
+            
+            Staralt staralt = new Staralt();
+            File plot = staralt.plot(info);
+            System.out.println();
+            System.out.println("Staralt plot saved to: " + plot.getAbsolutePath());
+            /* Do stuff with the plot */
+            plot.deleteOnExit(); /* don't clutter the temporary directory */
+            
+            
+        } catch (TargetNotFoundException e) {
+            System.out.println("not found!");
+        } catch (SIMBADQueryException e) {
+            System.out.println("connection failed");
+        }
+        
+        System.exit(0);
         
     }
 }
