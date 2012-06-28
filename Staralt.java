@@ -80,15 +80,15 @@ public class Staralt {
  
     
     /* Receives the path to a Staralt plot and downloads it to the default
-     * temporary-file directory. Returns the absolute path to the file to which
-     * the plot was saved. Bear in mind that you are responsible for the
-     * deletion of the file when it is no longer needed (for example, you could
-     * choose to use the deleteOnExit() method to arrange for it to be removed
-     * automatically). The plot is saved to a file with the .gif extension,
-     * as that is the format being currently used by Staralt */
+     * temporary-file directory. Returns a File object which encapsulates that
+     * to which the plot was saved. Bear in mind that you are responsible for
+     * the deletion of the file when it is no longer needed (for example, you
+     * could choose to use the deleteOnExit() method to arrange for it to be
+     * removed automatically). The plot is saved to a file with the .gif
+     * extension, as that is the format being currently used by Staralt */
     
     public static
-    String download(String url) throws IOException{
+    File download(String url) throws IOException{
         
         /* As seen at: http://stackoverflow.com/a/921400 */
         URL staralt = new URL(url);
@@ -96,14 +96,14 @@ public class Staralt {
         File dst = File.createTempFile("staralt_", ".gif");
         FileOutputStream fos = new FileOutputStream(dst);
         fos.getChannel().transferFrom(rbc, 0, 1 << 24);
-        return dst.getAbsolutePath();
+        return dst;
     }
 
     /* Ask Staralt to plot the altitude against time for this object and date,
-     * downloading the graph to a temporary GIF file and returning its absolute
-     * path. Note that you are responsible for the deletion of the file. */
+     * downloading the graph to a temporary GIF file and returning it as a File
+     * instance. Note that you are responsible for the deletion of the file. */
     
-    public String plot(TargetInformation info, int day, int month, int year) throws IOException {
+    public File plot(TargetInformation info, int day, int month, int year) throws IOException {
         String url = Staralt.build_query_url(info, day, month, year,
                                              this.longitude, this.latitude,
                                              this.altitude);
@@ -112,7 +112,7 @@ public class Staralt {
     }
     
     /* If the date is not given, default to today */
-    public String plot(TargetInformation info) throws IOException {
+    public File plot(TargetInformation info) throws IOException {
         
         DateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy");
         Calendar cal = Calendar.getInstance();
@@ -131,9 +131,10 @@ public class Staralt {
         TargetInformation info = resolver.submit("M101"); 
              
         Staralt staralt = new Staralt();
-        String path = staralt.plot(info);
-        System.out.println("Plot downloaded to: " + path);
-        
+        File plot = staralt.plot(info);
+        System.out.println("Plot saved to: " + plot.getAbsolutePath());
+        /* Do stuff with the plot */
+        plot.deleteOnExit(); /* don't clutter the temporary directory */
         
     }
 }
