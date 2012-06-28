@@ -95,18 +95,28 @@ public class Staralt {
         fos.getChannel().transferFrom(rbc, 0, 1 << 24);
         return dst.getAbsolutePath();
     }
+
+    /* Ask Staralt to plot the altitude against time for this object and date,
+     * downloading the graph to a temporary GIF file and returning its absolute
+     * path. Note that you are responsible for the deletion of the file. */
+    
+    public String plot(TargetInformation info, int day, int month, int year) throws IOException {
+        String url = Staralt.build_query_url(info, day, month, year,
+                                             this.longitude, this.latitude,
+                                             this.altitude);
+        return Staralt.download(url);
+        
+    }
     
     /* An illustration of how Staralt might be used in real code */  
-    public static void main(String[] args) throws SIMBADQueryException, TargetNotFoundException, IOException {
+    public static void main(String[] args) throws IOException, SIMBADQueryException, TargetNotFoundException {
         
         TargetResolver resolver = new TargetResolver();
-        TargetInformation info = resolver.submit("M101");
-        double longitude = 357.4537; 
-        double latitude = 37.2300;
-        int altitude = 2168;
-        String url = Staralt.build_query_url(info, 21, 12, 2012, longitude, latitude, altitude);
-        String path = Staralt.download(url);
-        System.out.println("Plot downloaded to:" + path);
+        TargetInformation info = resolver.submit("M101"); 
+             
+        Staralt staralt = new Staralt();
+        String path = staralt.plot(info, 21, 12, 2012);
+        System.out.println("Plot downloaded to: " + path);
         
     }
 }
