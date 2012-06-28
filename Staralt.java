@@ -23,6 +23,9 @@ import java.io.IOException;
 import java.net.URL;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
 
 
 public class Staralt {
@@ -108,6 +111,19 @@ public class Staralt {
         
     }
     
+    /* If the date is not given, default to today */
+    public String plot(TargetInformation info) throws IOException {
+        
+        DateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy");
+        Calendar cal = Calendar.getInstance();
+        String currDate = dateFormat.format(cal.getTime());
+        String[] tokens = currDate.split("/");
+        int day = Integer.parseInt(tokens[0]);
+        int month = Integer.parseInt(tokens[1]);
+        int year = Integer.parseInt(tokens[2]);
+        return this.plot(info, day, month, year);
+    }
+    
     /* An illustration of how Staralt might be used in real code */  
     public static void main(String[] args) throws IOException, SIMBADQueryException, TargetNotFoundException {
         
@@ -115,8 +131,9 @@ public class Staralt {
         TargetInformation info = resolver.submit("M101"); 
              
         Staralt staralt = new Staralt();
-        String path = staralt.plot(info, 21, 12, 2012);
+        String path = staralt.plot(info);
         System.out.println("Plot downloaded to: " + path);
+        
         
     }
 }
