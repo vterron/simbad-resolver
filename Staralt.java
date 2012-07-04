@@ -67,15 +67,18 @@ public class Staralt {
                 "form[sitecoord]=%.4f+" + /* Longitude (dec, 4), */
                 "%.4f+" + /* latitude (dec, 5) */
                 "%+d&" + /* and altitude (m, 6) */
-                "form[coordlist]=%.4f+" + /* Right ascension (dec, 7) */
-                "%.4f&" + /* Declination (dec, 8) */
+                "form[coordlist]=%s+" + /* object name (7) */
+                "%.4f+" + /* Right ascension (dec, 8) */
+                "%.4f&" + /* Declination (dec, 9) */
                 "form[paramdist]=2&" +
                 "form[minangle]=10&" +
                 "form[format]=gif&" +
                 "submit=+Retrieve+";  
 
+        /* The object name must be a single word */
+        String name = info.name.replaceAll("\\s", "");
         return String.format(query, day, month, year, longitude, latitude,
-                             altitude, info.ra_deg, info.dec_deg);
+                             altitude, name, info.ra_deg, info.dec_deg);
       }
  
     
