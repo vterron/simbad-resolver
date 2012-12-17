@@ -60,6 +60,22 @@ public class SIMBADQuerier implements Callable<String>{
         return coords;
     }
 
+    /* Decimal degrees to hours, minutes, seconds conversion */
+    public static double[] DD_to_HMS(double decimal_degrees){
+        double hours, minutes, seconds, tmp;
+
+        tmp = decimal_degrees / 15.0; /* A whole circle is 24 hours */
+        hours = (int) tmp; /* Take integer part */
+        /* Get decimal part, convert from hours to minutes */
+        tmp = (tmp - hours) * 60.0;
+        minutes = (int) tmp; /* Take integer part */
+        /* Get decimal part, convert from minutes to seconds */
+        seconds = (tmp - minutes) * 60;
+
+        double[] coords = {hours, minutes, seconds};
+        return coords;
+    }
+
     /* Queries SIMBAD by identifier (in layman's terms, the name of the object)
      * and returns the output as a String. If the connection to SIMBAD fails,
      * for whatever arcane reason, SIMBADQueryException is thrown.
