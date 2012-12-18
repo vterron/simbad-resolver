@@ -60,4 +60,41 @@ public class SIMBADQuerierTest {
         assertEquals(0, coords[2], delta);
 
     }
+
+
+    @Test
+    public void test_DD_to_HMS() {
+
+        double[] coords = SIMBADQuerier.DD_to_HMS(0.0);
+        assertEquals(0, (int)coords[0]); /* Hours */
+        assertEquals(0, (int)coords[1]); /* Minutes */
+        assertEquals(0, coords[2], delta); /* Seconds */
+
+        coords = SIMBADQuerier.DD_to_HMS(34.181);
+        assertEquals(2, (int)coords[0]);
+        assertEquals(16, (int)coords[1]);
+        assertEquals(43.439, coords[2], delta);
+
+        coords = SIMBADQuerier.DD_to_HMS(128.981);
+        assertEquals(8, (int)coords[0]);
+        assertEquals(35, (int)coords[1]);
+        assertEquals(55.44, coords[2], delta);
+
+        coords = SIMBADQuerier.DD_to_HMS(266.185);
+        assertEquals(17, (int)coords[0]);
+        assertEquals(44, (int)coords[1]);
+        assertEquals(44.4, coords[2], delta);
+
+        coords = SIMBADQuerier.DD_to_HMS(315.39);
+        assertEquals(21, (int)coords[0]);
+        assertEquals(1, (int)coords[1]);
+        assertEquals(33.599, coords[2], delta);
+
+        coords = SIMBADQuerier.DD_to_HMS(360);
+        assertEquals(24, (int)coords[0]);
+        assertEquals(0, (int)coords[1]);
+        assertEquals(0, coords[2], delta);
+
+    }
+
 }
