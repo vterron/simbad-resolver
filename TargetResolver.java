@@ -160,27 +160,42 @@ public class TargetResolver {
             info.ra_deg = Double.parseDouble(lineTokenizer.nextToken());
         } catch (NumberFormatException ex) {}  
     
-        /* Second line: right ascension, in sexagesimal numbers (a string) */
-        info.ra = lineTokenizer.nextToken();
-            
+        /* Convert the decimal degrees of the right ascension to hours, minutes
+         * and seconds, and format them as a string such as "21 38 08.74. Yes,
+         * we could obtain the coordinates in sexagesimal directly from SIMBAD,
+         * but doing the conversion ourselves gives us total control over how
+         * these coordinates are formatted " */
+        
+        double coords[] = SIMBADQuerier.DD_to_HMS(info.ra_deg);
+        int hours = (int) coords[0];
+        int minutes = (int) coords[1];
+        double seconds = coords[2];
+        info.ra = String.format("%02d %02d %05.2f", hours, minutes, seconds);
+                     
         try {
-            /* Third line: declination, in decimal degrees */
+            /* Second line: declination, in decimal degrees */
             info.dec_deg = Double.parseDouble(lineTokenizer.nextToken());
         } catch (NumberFormatException ex) {}
     
-        /* Fourth line: declination, in sexagesimal (string) */
-        info.dec = lineTokenizer.nextToken();
+        /* Decimal degrees of the declination to degrees, arcminutes and
+         * arcseconds, and format them as a string such as "+63 45 22.3 " */
+        
+        coords = SIMBADQuerier.DD_to_DMS(info.dec_deg);
+        int degrees = (int) coords[0];
+        int arcmins = (int) coords[1];
+        double arcsecs = coords[2];
+        info.dec = String.format("%+03d %02d %4.1f", degrees, arcmins, arcsecs);
     
-        /* Fifth line: classification of the object */
+        /* Third line: classification of the object */
         info.object_type = lineTokenizer.nextToken();
     
         try {
-            /* Sixth line: proper motion on the right ascension axis */
+            /* Fourth line: proper motion on the right ascension axis */
             info.pm_ra = Double.parseDouble(lineTokenizer.nextToken());
         } catch (NumberFormatException ex) {}
     
         try {
-            /* Seventh line: proper motion on the declination axis */
+            /* Fifth line: proper motion on the declination axis */
             info.pm_dec = Double.parseDouble(lineTokenizer.nextToken());
         } catch (NumberFormatException ex) {}
         

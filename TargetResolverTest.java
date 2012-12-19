@@ -176,6 +176,11 @@ public class TargetResolverTest {
      * that we expect, SIMBADQueryException and TargetNotFoundException, so
      * any one different that those two should never be thrown.  
      * 
+     * It is important to point out that this unit test does not check the
+     * values of the returned TargetResolver object, but only that the strings
+     * passed as argument are resolved, whether found in SIMBAD or not, without
+     * raising an exception. 
+     * 
      * Just for recreational and useless statistical purposes, right before
      * exiting the method will print to standard output the percentage of
      * resolutions which were successful. In my meandering experience, in many

@@ -105,9 +105,7 @@ public class SIMBADQuerier implements Callable<String>{
         String line_remainder = this.system + ";" + "J" + this.epoch + ";" + this.equinox + ")\\n";
 
         buffer.append("%COO(d;A;" + line_remainder);  /* RA (decimal degrees) */
-        buffer.append("%COO(A;"   + line_remainder);  /* RA (sexagesimal degrees) */
         buffer.append("%COO(d;D;" + line_remainder);  /* DEC (decimal degrees) */
-        buffer.append("%COO(D;"   + line_remainder);  /* DEC (sexagesimal degrees) */
 
         buffer.append("%OTYPE(V)\\n");  /* Verbose display of the main object type */
         buffer.append("%PM(A)\\n");     /* Proper motion on the right ascension axis */
