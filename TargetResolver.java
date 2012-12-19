@@ -166,12 +166,19 @@ public class TargetResolver {
          * but doing the conversion ourselves gives us total control over how
          * these coordinates are formatted " */
         
-        double coords[] = SIMBADQuerier.DD_to_HMS(info.ra_deg);
-        int hours = (int) coords[0];
-        int minutes = (int) coords[1];
-        double seconds = coords[2];
-        info.ra = String.format("%02d %02d %05.2f", hours, minutes, seconds);
-                     
+        double coords[] = null;
+        if (info.ra_deg == null) {
+            info.ra = null;
+        }
+        
+        else {
+            coords = SIMBADQuerier.DD_to_HMS(info.ra_deg);
+            int hours = (int) coords[0];
+            int minutes = (int) coords[1];
+            double seconds = coords[2];
+            info.ra = String.format("%02d %02d %05.2f", hours, minutes, seconds);    
+        }
+        
         try {
             /* Second line: declination, in decimal degrees */
             info.dec_deg = Double.parseDouble(lineTokenizer.nextToken());
@@ -179,13 +186,19 @@ public class TargetResolver {
     
         /* Decimal degrees of the declination to degrees, arcminutes and
          * arcseconds, and format them as a string such as "+63 45 22.3 " */
+           
+        if (info.dec_deg == null) {
+            info.dec = null;
+        }
         
-        coords = SIMBADQuerier.DD_to_DMS(info.dec_deg);
-        int degrees = (int) coords[0];
-        int arcmins = (int) coords[1];
-        double arcsecs = coords[2];
-        info.dec = String.format("%+03d %02d %4.1f", degrees, arcmins, arcsecs);
-    
+        else {
+            coords = SIMBADQuerier.DD_to_DMS(info.dec_deg);
+            int degrees = (int) coords[0];
+            int arcmins = (int) coords[1];
+            double arcsecs = coords[2];
+            info.dec = String.format("%+03d %02d %4.1f", degrees, arcmins, arcsecs);
+        }
+        
         /* Third line: classification of the object */
         info.object_type = lineTokenizer.nextToken();
     
