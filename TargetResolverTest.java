@@ -43,6 +43,9 @@ public class TargetResolverTest {
     /* The number of random (non-existent) to be (unsuccessfully) resolved) */
     private static int nRandomStrings = 50;
     
+    /* Maximum delta between real numbers for which they are considered equal */
+    private static double delta = 0.001;
+    
     
     /* Receives the path to the file containing the list of targets, one per
      * line, and returns them as an ArrayList of Strings. Lines whose first
@@ -225,5 +228,61 @@ public class TargetResolverTest {
                 100.0 * foundCounter / totalTargets, TargetInformation.newline);
     }
     
+    /* In the test above we have verified that objects are resolved without
+     * errors, but we still have to make sure that the values returned by 
+     * SIMBAD are correct. Here we use some specific objects and check that
+     * the returned coordinates match those in the website, which uses both
+     * as epoch and equinox of 2000, and ICRS as the first reference system
+     * for which coordinates are given. */
+         
+    @Test
+    public void testReturnedValues() throws SIMBADQueryException,
+                                            TargetNotFoundException {
 
+        /* M52 -- Open (galactic) Cluster  */
+        TargetResolver resolver = new TargetResolver(ReferenceSystem.ICRS, 2000, 2000);
+        TargetInformation info = resolver.submit("M52");
+        assertEquals(351.2, info.ra_deg, delta);
+        assertEquals(61.593, info.dec_deg, delta);
+        assertEquals("23 24 48.00", info.ra);
+        assertEquals("+61 35 34.8", info.dec);
+        assertEquals(-2.77, info.pm_ra, delta);
+        assertEquals(-1.18, info.pm_dec, delta);
+        
+        /* Trumpler 37 (IC 1396) -- Open (galactic) Cluster */
+        info = resolver.submit("Trumpler 37");
+        assertEquals(324.5362, info.ra_deg, delta);
+        assertEquals(57.4467, info.dec_deg, delta);
+        assertEquals("21 38 08.69", info.ra);
+        assertEquals("+57 26 48.1", info.dec);
+        assertEquals(-2.30, info.pm_ra, delta);
+        assertEquals(-3.81, info.pm_dec, delta);
+            
+        /* Mirach (Beta Andromedae) -- Variable Star */
+        info = resolver.submit("Mirach");
+        assertEquals(17.433016, info.ra_deg, delta);
+        assertEquals(35.620558, info.dec_deg, delta);
+        assertEquals("01 09 43.92", info.ra);
+        assertEquals("+35 37 14.0", info.dec);
+        assertEquals(175.90, info.pm_ra, delta);
+        assertEquals(-112.20, info.pm_dec, delta);
+        
+        /* Betelgeuse -- Semi-regular pulsating Star */ 
+        info = resolver.submit("Betelgeuse");
+        assertEquals(88.792939, info.ra_deg, delta);
+        assertEquals(7.407064, info.dec_deg, delta);
+        assertEquals("05 55 10.31", info.ra);
+        assertEquals("+07 24 25.4", info.dec);
+        assertEquals(27.54, info.pm_ra, delta);
+        assertEquals(11.30, info.pm_dec, delta);
+        
+        /* Wolf 359 (V* CN Leo) -- Flare Star */
+        info = resolver.submit("Wolf 359");
+        assertEquals(164.120271, info.ra_deg, delta);
+        assertEquals(7.014658, info.dec_deg, delta);
+        assertEquals("10 56 28.87", info.ra);
+        assertEquals("+07 00 52.8", info.dec);
+        assertEquals(-3842, info.pm_ra, delta);
+        assertEquals(-2725, info.pm_dec, delta);
+    }
 }
