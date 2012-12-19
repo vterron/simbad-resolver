@@ -99,6 +99,7 @@ public class Staralt {
         File dst = File.createTempFile("staralt_", ".gif");
         FileOutputStream fos = new FileOutputStream(dst);
         fos.getChannel().transferFrom(rbc, 0, 1 << 24);
+        fos.close();
         return dst;
     }
 
