@@ -25,7 +25,7 @@ public class TargetInformation {
      * attributes are initialized to null; otherwise, a right ascension in
      * decimal degrees of exactly zero, for example, would be indistinguishable
      * from 0.0d, the default value of the double data type. */
-                 
+
     public String name            = null;  /* Identifier used for the SIMBAD query */
     public Double ra_deg          = null;  /* Right ascension... */
     public Double dec_deg         = null;  /* and declination, in decimal degrees ... */

@@ -17,7 +17,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  **********************************************************************/
 
-/* Indicates that the object could no be found in SIMBAD */ 
+/* Indicates that the object could no be found in SIMBAD */
 public class TargetNotFoundException extends Exception {
 
     /* Eclipse's "Add general serial version ID" quick fix */

@@ -21,13 +21,13 @@ import java.util.Random;
 
 /* Celestial reference systems allowed by SIMBAD for coordinate queries */
 public enum ReferenceSystem {
-    
+
     ICRS, FK5, FK4, GAL, SGAL, ECL;
-    
+
     /* Returns one of the reference systems, selected randomly */
     public static ReferenceSystem random() {
         int randomIndex = new Random().nextInt(ReferenceSystem.values().length);
         return ReferenceSystem.values()[randomIndex];
     }
-    
+
 }
